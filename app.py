@@ -7,6 +7,8 @@ st.set_page_config(page_title='StartUp Funding Trendz', page_icon=':moneybag:', 
 
 df=pd.read_csv('startup_funding_cleaned.csv')
 df['date']=pd.to_datetime(df['date'])
+df['month']=df['date'].dt.month
+df['year']=df['date'].dt.year
 #df['Investors Name']=df['Investors Name'].fillna('Unknown')
 
 #data cleaned on kaggle using below commands
@@ -79,12 +81,51 @@ df['date']=pd.to_datetime(df['date'])
 st.sidebar.title("StartUp Funding Trendz")
 option= st.sidebar.selectbox('Select the option',['Overall Analysis','Investors','StartUp Industry'])
 
+def load_overall_analysis():
+    st.title('StartUp Funding Analysis')
+    st.write('This is the overall analysis of the StartUp Funding')
+    #total invested amount
+    total= round(df['amount'].sum())
+    #max amount of investment
+    max_funding=df.groupby('startup')['amount'].max().sort_values(ascending=False).head(1).values[0]
+    #average ticket size
+    avg_funding= df.groupby('startup')['amount'].sum().mean()
+    #total funded startups
+    num_startups=df['startup'].nunique()
+
+    col1,col2,col3, col4=st.columns(4)
+    with col1:
+         st.metric('Total Funding',str(total)+' Cr')
+    with col2:
+            st.metric('Max Funding',str(max_funding)+' Cr')
+    with col3:
+            st.metric('Average Funding',str(round(avg_funding))+' Cr')
+    with col4:
+            st.metric('Total StartUps Funded',num_startups)
+    st.header('Month by Month Graph')
+    selected_option=st.selectbox('Select Type',['Total','Count'])
+    if selected_option=='Total':
+          temp_df=df.groupby(['year','month'])['amount'].sum().reset_index()
+    else:
+           temp_df=df.groupby(['year','month'])['amount'].count().reset_index()
+          
+          
+   
+    temp_df['x_axis']=temp_df['month'].astype('str')+ '-'+ temp_df['year'].astype('str')
+    fig, ax= plt.subplots()
+    ax.plot(temp_df['x_axis'],temp_df['amount'])
+    st.pyplot(fig)
+    
+         
+
+
 def load_inverstor_details(investor):
     st.title(investor)
     #loading the recent 5 investment of investor
     recent=df[df['investors'].str.contains(investor)].head()[['date','startup','vertical','city','round','amount']]
     st.subheader('Recent Investments')
     st.dataframe(recent)
+    
    
     col1,col2=st.columns(2)
     with col1:
@@ -118,9 +159,10 @@ def load_inverstor_details(investor):
     st.pyplot(fig2)
 
 if option=='Overall Analysis':
-    st.title('StartUp Funding Analysis')
-    st.write('This is the overall analysis of the StartUp Funding')
-    st.write(df)
+    # st.title('StartUp Funding Analysis')
+    # st.write('This is the overall analysis of the StartUp Funding')
+    # st.write(df)
+    load_overall_analysis()
 
 elif option=='Investors':
     selected_investor =st.sidebar.selectbox('Select the option',sorted(set(df['investors'].str.split(',').sum())))
