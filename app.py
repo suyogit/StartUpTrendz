@@ -1,8 +1,12 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
+st.set_page_config(page_title='StartUp Funding Trendz', page_icon=':moneybag:', layout='wide')
 
 df=pd.read_csv('startup_funding_cleaned.csv')
+df['date']=pd.to_datetime(df['date'])
 #df['Investors Name']=df['Investors Name'].fillna('Unknown')
 
 #data cleaned on kaggle using below commands
@@ -75,15 +79,56 @@ df=pd.read_csv('startup_funding_cleaned.csv')
 st.sidebar.title("StartUp Funding Trendz")
 option= st.sidebar.selectbox('Select the option',['Overall Analysis','Investors','StartUp Industry'])
 
+def load_inverstor_details(investor):
+    st.title(investor)
+    #loading the recent 5 investment of investor
+    recent=df[df['investors'].str.contains(investor)].head()[['date','startup','vertical','city','round','amount']]
+    st.subheader('Recent Investments')
+    st.dataframe(recent)
+   
+    col1,col2=st.columns(2)
+    with col1:
+         #loading the biggest investments of investor
+            biggest=df[df['investors'].str.contains(investor)].groupby('startup')['amount'].sum().sort_values(ascending=False).head().reset_index()
+            st.subheader('Biggest Investments')
+            #st.dataframe(biggest)
+            fig, ax= plt.subplots()
+            ax.bar(biggest['startup'],biggest['amount'])
+            st.pyplot(fig)
+    with col2:
+         #pie char of sectors invested in by investor
+            sectors=df[df['investors'].str.contains(investor)].groupby('vertical')['amount'].sum().sort_values(ascending=False)
+            st.subheader('Sectors Invested In')
+            fig, ax= plt.subplots()
+            ax.pie(sectors, labels=sectors.index, autopct='%1.1f%%')
+            st.pyplot(fig)
+
+    #plot a liniar graph of inverstment year wise
+    df['year']=df['date'].dt.year
+    # df.info()
+    years= df[df['investors'].str.contains(investor)].groupby('year')['amount'].sum() # it is a series because we are using groupby
+    #print(years)
+    st.subheader('Investment Year Wise')
+    fig2, ax2= plt.subplots()
+    #debugging
+    # print(years.index)
+    # print(years.values)
+
+    ax2.plot(years.index,years.values)
+    st.pyplot(fig2)
+
 if option=='Overall Analysis':
     st.title('StartUp Funding Analysis')
     st.write('This is the overall analysis of the StartUp Funding')
     st.write(df)
 
 elif option=='Investors':
-    st.sidebar.selectbox('Select the option',sorted(set(df['investors'].str.split(',').sum())))
+    selected_investor =st.sidebar.selectbox('Select the option',sorted(set(df['investors'].str.split(',').sum())))
     btn1=st.sidebar.button('Search')
-    st.title('StartUp Funding Analysis')
+    st.title('Investor Analysis')
+    if btn1:
+        load_inverstor_details(selected_investor)
+
 
 else:
     st.sidebar.selectbox('Select the option',sorted(df['startup'].unique().tolist()))
